@@ -26,4 +26,29 @@ contract LiquidityPoolTest is Test {
         assert(app.V2Router02Address() == uniswapV2SwappRouterAddress);
     }
 
+    /**
+     * @notice Test that swapTokens functionality works correctly 
+     */
+    function testSwapTokensCorrectly() public {
+        vm.startPrank(user);
+        uint256 amountIn = 5 * 1e6; //  1e6 decimal numbers of usdt token in arbitrum network
+        IERC20(USDT).approve(address(app), amountIn); 
+        
+        uint256 amountOutMin = 1 * 1e18; // 1e18 decimal numbers of dai token in arbitrum network
+        uint256 deadline = 1747815058 + 1000000000;
+        address[] memory path = new address[](2);
+        path[0] = USDT;
+        path[1] = DAI;
+
+        uint256 usdtBalanceBefore = IERC20(USDT).balanceOf(user); 
+        uint256 daiBalanceBefore = IERC20(DAI).balanceOf(user);
+        app.swapTokens(amountIn, amountOutMin, path, user, deadline); 
+        uint256 usdtBalanceAfter = IERC20(USDT).balanceOf(user);
+        uint256 daiBalanceAfter = IERC20(DAI).balanceOf(user);
+
+        assert(usdtBalanceAfter == usdtBalanceBefore - amountIn);
+        assert(daiBalanceAfter > daiBalanceBefore);
+        vm.stopPrank();
+    }
+
 }

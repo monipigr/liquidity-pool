@@ -26,6 +26,7 @@ contract LiquidityPoolTest is Test {
         assert(app.V2Router02Address() == uniswapV2SwappRouterAddress);
     }
 
+
     /**
      * @notice Test that swapTokens functionality works correctly 
      */
@@ -51,4 +52,78 @@ contract LiquidityPoolTest is Test {
         vm.stopPrank();
     }
 
+
+    /**
+     * @notice Check if liquidity can be added correctly
+     */
+    function testCanAddLiquidityCorrectly() public {
+        vm.startPrank(user);
+        uint256 amountIn_ = 6 * 1e6; 
+        uint256 amountOutMin_ = 1 * 1e18;
+        address[] memory path_ = new address[](2);
+        path_[0] = USDT; 
+        path_[1] = DAI;
+        uint256 amountAMin_ = 0; 
+        uint256 amountBMin_ = 0;  
+        uint256 deadline_ = 1747815058 + 1000000000;        
+
+        IERC20(USDT).approve(address(app), amountIn_);
+        app.addLiquidity(amountIn_, amountOutMin_, path_, amountAMin_, amountBMin_, deadline_);
+
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice Check if liquidity can be removed correctly
+     */
+    function testCanRemoveLiquidityCorrectly() public {
+        vm.startPrank(user);
+        
+        // Adding liquidity first
+        uint256 amountIn_ = 6 * 1e6; 
+        uint256 amountOutMin_ = 2 * 1e18;
+        address[] memory path_ = new address[](2);
+        path_[0] = USDT;
+        path_[1] = DAI;
+        uint256 amountAMin_ = 0; 
+        uint256 amountBMin_ = 0; 
+        uint256 deadline_ = 1747815058 + 1000000000;        
+
+        IERC20(USDT).approve(address(app), amountIn_);
+        app.addLiquidity(amountIn_, amountOutMin_, path_, amountAMin_, amountBMin_, deadline_);
+
+        // Getting the LP token address
+        address lpTokenAddress = IFactory(uniswapV2FactoryAddress).getPair(USDT, DAI);
+        
+        uint256 lpTokenBalance = IERC20(lpTokenAddress).balanceOf(user);
+        assertGt(lpTokenBalance, 0, "Usuario debe tener LP tokens");
+        
+        // Saving initial balances of USDT and DAI for later comparison
+        uint256 initialUSDTBalance = IERC20(USDT).balanceOf(user);
+        uint256 initialDAIBalance = IERC20(DAI).balanceOf(user);
+        
+        // Transfering LP tokens to the contract
+        IERC20(lpTokenAddress).transfer(address(app), lpTokenBalance);
+        
+        // Removing liquidity
+        uint256 liquidityAmount_ = lpTokenBalance; // Remover toda la liquidez
+        uint256 amountAMinRemove_ = 0; 
+        uint256 amountBMinRemove_ = 0; 
+        address to_ = user; 
+        uint256 deadlineRemove_ = 1747815058 + 1000000000;
+        
+        app.removeLiquidity(liquidityAmount_, amountAMinRemove_, amountBMinRemove_, to_, deadlineRemove_);
+        
+        uint256 finalLpTokenBalance = IERC20(lpTokenAddress).balanceOf(user);
+        assertEq(finalLpTokenBalance, 0, "Usuario no tiene LP tokens despues de remover liquidez");
+        
+        uint256 finalUSDTBalance = IERC20(USDT).balanceOf(user);
+        uint256 finalDAIBalance = IERC20(DAI).balanceOf(user);
+        
+        assertGt(finalUSDTBalance, initialUSDTBalance, "Usuario recibe USDT de vuelta");
+        assertGt(finalDAIBalance, initialDAIBalance, "Usuario recibe DAI de vuelta");
+        
+        vm.stopPrank();
+    }
+    
 }
